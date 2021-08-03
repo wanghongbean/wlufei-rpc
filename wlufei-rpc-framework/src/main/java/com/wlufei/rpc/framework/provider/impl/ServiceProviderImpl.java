@@ -12,6 +12,8 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.wlufei.rpc.framework.registry.impl.ZKRegistryServiceImpl.ZK_REGISTRY_SPI;
+
 
 /**
  * 服务提供者impl
@@ -26,7 +28,7 @@ public class ServiceProviderImpl implements ServiceProvider {
 
     public ServiceProviderImpl() {
         //fixme name暂时写死
-        registryService = ExtensionLoader.getExtensionLoader(RegistryService.class).getExtension("zkRegistry");
+        registryService = ExtensionLoader.getExtensionLoader(RegistryService.class).getExtension(ZK_REGISTRY_SPI);
     }
 
     /**

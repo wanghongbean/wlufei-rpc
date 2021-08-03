@@ -3,15 +3,17 @@ package com.wlufei.rpc.framework.registry.impl;
 import com.wlufei.rpc.framework.common.RPCRequest;
 import com.wlufei.rpc.framework.common.enums.RpcErrorMessageEnum;
 import com.wlufei.rpc.framework.common.exception.RpcException;
+import com.wlufei.rpc.framework.common.extensions.ExtensionLoader;
 import com.wlufei.rpc.framework.common.utils.CuratorUtils;
 import com.wlufei.rpc.framework.loadbalance.LoadBalance;
-import com.wlufei.rpc.framework.loadbalance.impl.RandomLoadBalanceImpl;
 import com.wlufei.rpc.framework.registry.RegistryService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.net.InetSocketAddress;
 import java.util.List;
+
+import static com.wlufei.rpc.framework.loadbalance.impl.RandomLoadBalanceImpl.LOAD_BALANCE_RANDOM;
 
 
 /**
@@ -22,10 +24,12 @@ import java.util.List;
  */
 @Slf4j
 public class ZKRegistryServiceImpl implements RegistryService {
+    public static final String ZK_REGISTRY_SPI = "zkRegistry";
+
     private final LoadBalance loadBalance;
 
     public ZKRegistryServiceImpl() {
-        loadBalance = new RandomLoadBalanceImpl();
+        loadBalance = ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(LOAD_BALANCE_RANDOM);
     }
 
     @Override

@@ -18,6 +18,7 @@ import java.util.Random;
  */
 @Slf4j
 public class RandomLoadBalanceImpl implements LoadBalance {
+    public static final String LOAD_BALANCE_RANDOM = "random";
 
     @Override
     public String whichOne(List<String> hostAddress, RPCRequest rpcRequest) {

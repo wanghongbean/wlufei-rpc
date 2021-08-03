@@ -16,6 +16,8 @@ import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
+import static com.wlufei.rpc.framework.registry.impl.ZKRegistryServiceImpl.ZK_REGISTRY_SPI;
+
 
 /**
  * 套接字 rpc request 传输
@@ -28,12 +30,13 @@ public class SocketRPCClient implements RPCRequestTransport {
     private final RegistryService registryService;
 
     public SocketRPCClient() {
-        registryService = ExtensionLoader.getExtensionLoader(RegistryService.class).getExtension("zkRegistry");
+        registryService = ExtensionLoader.getExtensionLoader(RegistryService.class).getExtension(ZK_REGISTRY_SPI);
     }
 
     @Override
     public Object sendRPCRequest(RPCRequest rpcRequest) {
         InetSocketAddress inetSocketAddress = registryService.lookupService(rpcRequest);
+        log.info("get service provider inetAddr:{}",inetSocketAddress.toString());
         Socket socket = new Socket();
         try {
             socket.connect(inetSocketAddress);

@@ -1,0 +1,1 @@
+random = com.wlufei.rpc.framework.loadbalance.impl.RandomLoadBalanceImpl

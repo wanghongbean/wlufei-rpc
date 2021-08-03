@@ -29,7 +29,7 @@
 # 1.1版本功能  
 - [x] SPI扩展加载具体实现类
   - [x] 注册中心SPI实现
-  - [ ] 负载均衡  
+  - [x] 负载均衡  
 - [ ] Netty底层网络通信实现
 
 ### SPI 扩展加载类
@@ -41,10 +41,14 @@
 ### 负载均衡SPI实现类
 
 ### 遗留问题
-1. com.wlufei.rpc.framework.client.SocketRPCClient.sendRPCRequest#socket.connect(inetSocketAddress);偶尔超时
+1. com.wlufei.rpc.framework.client.SocketRPCClient.sendRPCRequest#socket.connect(inetSocketAddress);偶尔超时  
+  可能是家庭路由器配置问题,导致获取到的IP地址在变化
 
 ### 知识短板
 1. Class 相关API,如 `clazz.newInstance()`,`Class<?> clazz = Class.forName(line, true, classLoader)`
 
 # 1.2 版本功能
+- [ ] SPI扩展加载增强功能实现  
+  - [ ] 实现服务注入
+  - [ ] wrapper增强功能
 - [ ] 数据传输序列化
