@@ -1,16 +1,17 @@
 package com.wlufei.rpc.framework.common.extensions;
 
 
+import com.wlufei.rpc.framework.common.annotation.Adaptive;
 import com.wlufei.rpc.framework.common.annotation.SPI;
+import com.wlufei.rpc.framework.common.factory.ExtensionFactory;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -21,12 +22,13 @@ import java.util.regex.Pattern;
  * @date 2021/08/01
  */
 @Slf4j
+@SuppressWarnings("unchecked")
 public final class ExtensionLoader<T> {
 
     private static final String SPI_CONFIG_DIR = "META-INF/dubbo/";
 
     private static final ConcurrentHashMap<Class<?>, ExtensionLoader<?>> EXTENSION_LOADERS = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<Class<?>, Object> SPI_INSTANCES = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Class<?>, Object> SPI_INSTANCES = new ConcurrentHashMap<>();
     private static final Pattern NAME_SEPARATOR = Pattern.compile("\\s*[,]+\\s*");
 
     /**
@@ -69,8 +71,92 @@ public final class ExtensionLoader<T> {
      */
     private String cachedDefaultName;
 
+    private ExtensionFactory objectFactory;
+
+    /**
+     * ClassLoader实例的自适应类 缓存
+     * 项目代码中已经指定的 @Adaptive为 自适应实现的Class 类
+     */
+    private volatile Class<?> cachedAdaptiveClass = null;
+
+    /**
+     * 自适应实例缓存
+     * 有可能通过字节码实现的实例对象
+     */
+    private final Holder<Object> cachedAdaptiveInstance = new Holder<>();
+
     private ExtensionLoader(Class<T> type) {
         this.type = type;
+        objectFactory = type == ExtensionFactory.class ? null : ExtensionLoader.getExtensionLoader(ExtensionFactory.class).getAdaptiveExtension();
+    }
+
+    public T getAdaptiveExtension() {
+        Object adaptiveInstance = cachedAdaptiveInstance.get();
+        if (null == adaptiveInstance) {
+            synchronized (cachedAdaptiveInstance) {
+                adaptiveInstance = cachedAdaptiveInstance.get();
+                if (null == adaptiveInstance) {
+                    adaptiveInstance = createAdaptiveExtension();
+                    cachedAdaptiveInstance.set(adaptiveInstance);
+                }
+            }
+        }
+        return (T) adaptiveInstance;
+    }
+
+    @SuppressWarnings("unchecked")
+    private T createAdaptiveExtension() {
+        try {
+            return injectExtension((T) getAdaptiveExtensionClass().newInstance());
+        } catch (Exception e) {
+            throw new IllegalStateException("Can not create adaptive extenstion " + type + ", cause: " + e.getMessage(), e);
+        }
+    }
+
+    private T injectExtension(T newInstance) {
+        if (null != objectFactory) {
+            //setter方法注入
+            for (Method method : newInstance.getClass().getMethods()) {
+                if (method.getName().startsWith("set") //set 开头的方法
+                        && method.getParameterTypes().length == 1 // 参数类型长度为1
+                        && Modifier.isPublic(method.getModifiers())) {//public 修饰
+                    Class<?> parameterType = method.getParameterTypes()[0];
+                    try {
+                        //从方法名中取出属性名称
+                        String property = method.getName().length() > 3 ? method.getName().substring(3, 4).toLowerCase() + method.getName().substring(4) : "";
+                        Object extension = objectFactory.getExtension(parameterType, property);
+                        if (null != extension) {
+                            method.invoke(newInstance, extension);
+                        }
+                    } catch (Exception e) {
+                        log.error("fail to inject via method " + method.getName()
+                                + " of interface " + type.getName() + ": " + e.getMessage(), e);
+                    }
+
+                }
+            }
+        }
+        return newInstance;
+    }
+
+    private Class<?> getAdaptiveExtensionClass() {
+        getExtensionClasses();
+        //加载定义目录下的实现时根据@adaptive标注的自适应实现Class
+        if (null != cachedAdaptiveClass) {
+            return cachedAdaptiveClass;
+        }
+        //根据invoker的url 生成自适应的实现
+        cachedAdaptiveClass = createAdaptiveExtensionClass();
+        return cachedAdaptiveClass;
+    }
+
+    /**
+     * 创建自适应扩展类
+     *
+     * @return {@link Class<?>}
+     */
+    private Class<?> createAdaptiveExtensionClass() {
+        throw new UnsupportedOperationException("暂不支持 生成自适应扩展类");
     }
 
     private static <T> boolean withExtensionAnnotation(Class<T> type) {
@@ -257,12 +343,22 @@ public final class ExtensionLoader<T> {
                                             + type + ", class line: " + clazz.getName() + "), class "
                                             + clazz.getName() + "is not subtype of interface.");
                                 }
-                                //fixme 这块先简单实现加载功能
-                                Class<?> c = extensionClasses.get(name);
-                                if (null == c) {
-                                    extensionClasses.put(name, clazz);
+                                if (clazz.isAnnotationPresent(Adaptive.class)) {
+                                    if (null == cachedAdaptiveClass) {
+                                        cachedAdaptiveClass = clazz;
+                                    } else {
+                                        throw new IllegalStateException("More than 1 adaptive class found: "
+                                                + cachedAdaptiveClass.getClass().getName()
+                                                + ", " + clazz.getClass().getName());
+                                    }
                                 } else {
-                                    throw new IllegalStateException("Duplicate extension " + type.getName() + " name " + name + " on " + c.getName() + " and " + clazz.getName());
+                                    //fixme 这块先简单实现加载功能
+                                    Class<?> c = extensionClasses.get(name);
+                                    if (null == c) {
+                                        extensionClasses.put(name, clazz);
+                                    } else {
+                                        throw new IllegalStateException("Duplicate extension " + type.getName() + " name " + name + " on " + c.getName() + " and " + clazz.getName());
+                                    }
                                 }
                             }
 
@@ -279,6 +375,11 @@ public final class ExtensionLoader<T> {
             log.error("Exception when load extension class(interface: "
                     + type + ", class file: " + url + ") in " + url, t);
         }
+    }
+
+    public Set<String> getSupportedExtensions(){
+        Map<String, Class<?>> extensionClasses = getExtensionClasses();
+        return Collections.unmodifiableSet(new TreeSet<>(extensionClasses.keySet()));
     }
 
     private static ClassLoader findClassLoader() {

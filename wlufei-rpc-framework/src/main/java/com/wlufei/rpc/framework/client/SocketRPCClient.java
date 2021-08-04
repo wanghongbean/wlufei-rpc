@@ -1,13 +1,11 @@
 package com.wlufei.rpc.framework.client;
 
+import com.wlufei.rpc.framework.common.RPCRequest;
 import com.wlufei.rpc.framework.common.enums.RpcErrorMessageEnum;
 import com.wlufei.rpc.framework.common.exception.RpcException;
 import com.wlufei.rpc.framework.common.extensions.ExtensionLoader;
 import com.wlufei.rpc.framework.registry.RegistryService;
-import com.wlufei.rpc.framework.registry.ServiceDiscovery;
-import com.wlufei.rpc.framework.registry.impl.ZKServiceDiscoveryImpl;
 import com.wlufei.rpc.framework.remoting.RPCRequestTransport;
-import com.wlufei.rpc.framework.common.RPCRequest;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -36,7 +34,7 @@ public class SocketRPCClient implements RPCRequestTransport {
     @Override
     public Object sendRPCRequest(RPCRequest rpcRequest) {
         InetSocketAddress inetSocketAddress = registryService.lookupService(rpcRequest);
-        log.info("get service provider inetAddr:{}",inetSocketAddress.toString());
+        log.info("get service provider inetAddr:{}", inetSocketAddress.toString());
         Socket socket = new Socket();
         try {
             socket.connect(inetSocketAddress);

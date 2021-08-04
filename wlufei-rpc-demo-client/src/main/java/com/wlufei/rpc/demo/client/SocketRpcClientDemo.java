@@ -23,7 +23,7 @@ public class SocketRpcClientDemo {
         GoingMerry goingMerry = GoingMerry.builder().captain("lufei")
                 .partners(Arrays.asList("suolong", "namei", "wusuopu", "qiaoba")).build();
         String result = wangLufeiService.onePiece(goingMerry);
-        System.out.println("======   "+ result);
+        System.out.println("======   " + result);
         TimeUnit.SECONDS.sleep(2);
         GoingMerry baji = GoingMerry.builder().captain("baji").build();
         String bajiResult = wangLufeiService.onePiece(baji);
