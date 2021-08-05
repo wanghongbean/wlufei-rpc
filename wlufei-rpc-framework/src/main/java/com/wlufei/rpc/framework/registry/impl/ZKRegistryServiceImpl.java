@@ -25,10 +25,14 @@ import java.util.List;
 public class ZKRegistryServiceImpl implements RegistryService {
     public static final String ZK_REGISTRY_SPI = "zkRegistry";
 
-    private final LoadBalance loadBalance;
+    private LoadBalance loadBalance;
 
     public ZKRegistryServiceImpl() {
-        loadBalance = ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(RandomLoadBalanceImpl.LOAD_BALANCE_RANDOM);
+//        loadBalance = ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(RandomLoadBalanceImpl.LOAD_BALANCE_RANDOM);
+    }
+
+    public void setLoadBalance(LoadBalance loadBalance) {
+        this.loadBalance = loadBalance;
     }
 
     @Override

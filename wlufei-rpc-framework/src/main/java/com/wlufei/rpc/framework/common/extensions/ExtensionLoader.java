@@ -25,8 +25,6 @@ import java.util.regex.Pattern;
 @SuppressWarnings("unchecked")
 public final class ExtensionLoader<T> {
 
-    private static final String SPI_CONFIG_DIR = "META-INF/dubbo/";
-
     private static final ConcurrentHashMap<Class<?>, ExtensionLoader<?>> EXTENSION_LOADERS = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Class<?>, Object> SPI_INSTANCES = new ConcurrentHashMap<>();
     private static final Pattern NAME_SEPARATOR = Pattern.compile("\\s*[,]+\\s*");
@@ -109,11 +107,12 @@ public final class ExtensionLoader<T> {
         try {
             return injectExtension((T) getAdaptiveExtensionClass().newInstance());
         } catch (Exception e) {
-            throw new IllegalStateException("Can not create adaptive extenstion " + type + ", cause: " + e.getMessage(), e);
+            throw new IllegalStateException("Can not create adaptive extenstion [" + type + "], cause: " + e.getMessage(), e);
         }
     }
 
     private T injectExtension(T newInstance) {
+        log.info("going inject instance:{}", newInstance.toString());
         if (null != objectFactory) {
             //setter方法注入
             for (Method method : newInstance.getClass().getMethods()) {
@@ -156,7 +155,7 @@ public final class ExtensionLoader<T> {
      * @return {@link Class<?>}
      */
     private Class<?> createAdaptiveExtensionClass() {
-        throw new UnsupportedOperationException("暂不支持 生成自适应扩展类");
+        throw new UnsupportedOperationException("暂不支持 type: ["+ type.getName() +"] 生成自适应扩展类");
     }
 
     private static <T> boolean withExtensionAnnotation(Class<T> type) {
@@ -203,6 +202,9 @@ public final class ExtensionLoader<T> {
         if (null == name || name.length() == 0) {
             throw new IllegalArgumentException("spi intance name can not be null");
         }
+        if (null != cachedDefaultName && cachedDefaultName.length() > 0) {
+            return getExtension(cachedDefaultName);
+        }
         Holder<Object> holder = cachedInstances.get(name);
         if (null == holder) {
             cachedInstances.putIfAbsent(name, new Holder<>());
@@ -236,15 +238,18 @@ public final class ExtensionLoader<T> {
             throw new IllegalStateException("No such extension \"" + name + "\" for " + type.getName() + "!");
         }
         T instance = (T) SPI_INSTANCES.get(clazz);
-        if (null == instance) {
-            try {
+        try {
+            if (null == instance) {
                 SPI_INSTANCES.putIfAbsent(clazz, (T) clazz.newInstance());
                 instance = (T) SPI_INSTANCES.get(clazz);
-            } catch (Throwable t) {
-                throw new IllegalStateException("Extension instance(name: " + name + ", class: "
-                        + type + ")  could not be instantiated: " + t.getMessage(), t);
             }
+            //dubbo ioc setter注入
+            injectExtension(instance);
+        } catch (Throwable t) {
+            throw new IllegalStateException("Extension instance(name: " + name + ", class: "
+                    + type + ",clazz :" + clazz.getName() + ")  could not be instantiated: " + t.getMessage(), t);
         }
+
 
         return instance;
     }
@@ -377,7 +382,7 @@ public final class ExtensionLoader<T> {
         }
     }
 
-    public Set<String> getSupportedExtensions(){
+    public Set<String> getSupportedExtensions() {
         Map<String, Class<?>> extensionClasses = getExtensionClasses();
         return Collections.unmodifiableSet(new TreeSet<>(extensionClasses.keySet()));
     }

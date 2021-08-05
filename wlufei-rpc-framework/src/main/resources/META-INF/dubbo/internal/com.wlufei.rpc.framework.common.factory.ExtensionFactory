@@ -1,0 +1,2 @@
+adaptiveFactory = com.wlufei.rpc.framework.common.extensions.factory.AdaptiveExtensionFactory
+spiFactory = com.wlufei.rpc.framework.common.extensions.factory.SpiExtensionFactory
