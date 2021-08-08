@@ -2,6 +2,7 @@ package com.wlufei.rpc.framework.loadbalance.impl;
 
 
 import com.wlufei.rpc.framework.common.RPCRequest;
+import com.wlufei.rpc.framework.common.URL;
 import com.wlufei.rpc.framework.common.enums.RpcErrorMessageEnum;
 import com.wlufei.rpc.framework.common.exception.RpcException;
 import com.wlufei.rpc.framework.loadbalance.LoadBalance;
@@ -21,7 +22,7 @@ public class RandomLoadBalanceImpl implements LoadBalance {
     public static final String LOAD_BALANCE_RANDOM = "random";
 
     @Override
-    public String whichOne(List<String> hostAddress, RPCRequest rpcRequest) {
+    public String whichOne(List<String> hostAddress, URL url, RPCRequest rpcRequest) {
         if (null == hostAddress || hostAddress.isEmpty()) {
             throw new RpcException(RpcErrorMessageEnum.SERVICE_CAN_NOT_BE_FOUND, rpcRequest.getRPCServiceName());
         }

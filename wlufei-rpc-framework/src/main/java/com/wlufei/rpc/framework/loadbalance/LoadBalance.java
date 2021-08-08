@@ -2,6 +2,8 @@ package com.wlufei.rpc.framework.loadbalance;
 
 
 import com.wlufei.rpc.framework.common.RPCRequest;
+import com.wlufei.rpc.framework.common.URL;
+import com.wlufei.rpc.framework.common.annotation.Adaptive;
 import com.wlufei.rpc.framework.common.annotation.SPI;
 import com.wlufei.rpc.framework.loadbalance.impl.RandomLoadBalanceImpl;
 
@@ -16,5 +18,6 @@ import java.util.List;
 @SPI(RandomLoadBalanceImpl.LOAD_BALANCE_RANDOM)
 public interface LoadBalance {
 
-    String whichOne(List<String> hostAddress, RPCRequest rpcRequest);
+    @Adaptive("loadbalance")
+    String whichOne(List<String> hostAddress, URL url, RPCRequest rpcRequest);
 }

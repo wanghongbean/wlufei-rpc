@@ -1,13 +1,14 @@
 package com.wlufei.rpc.framework.registry.impl;
 
 
-import com.wlufei.rpc.framework.common.utils.CuratorUtils;
+import com.wlufei.rpc.framework.common.RPCRequest;
+import com.wlufei.rpc.framework.common.URL;
 import com.wlufei.rpc.framework.common.enums.RpcErrorMessageEnum;
 import com.wlufei.rpc.framework.common.exception.RpcException;
+import com.wlufei.rpc.framework.common.utils.CuratorUtils;
 import com.wlufei.rpc.framework.loadbalance.LoadBalance;
 import com.wlufei.rpc.framework.loadbalance.impl.RandomLoadBalanceImpl;
 import com.wlufei.rpc.framework.registry.ServiceDiscovery;
-import com.wlufei.rpc.framework.common.RPCRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 
@@ -36,7 +37,8 @@ public class ZKServiceDiscoveryImpl implements ServiceDiscovery {
         if (null == childrenNodes || childrenNodes.isEmpty()) {
             throw new RpcException(RpcErrorMessageEnum.SERVICE_CAN_NOT_BE_FOUND, rpcRequest.getRPCServiceName());
         }
-        String targetServiceAddress = loadBalance.whichOne(childrenNodes, rpcRequest);
+        URL url = URL.valueOf("");
+        String targetServiceAddress = loadBalance.whichOne(childrenNodes, url, rpcRequest);
         log.info("lookup service success.serviceName:{},server:{}", rpcRequest.getRPCServiceName(), targetServiceAddress);
         String[] socketAddressArray = targetServiceAddress.split(":");
         String host = socketAddressArray[0];
