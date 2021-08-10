@@ -3,6 +3,8 @@ package com.wlufei.rpc.framework.common;
 import lombok.*;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
 
 /**
@@ -25,6 +27,9 @@ public class RPCRequest implements Serializable {
     private Class<?>[] paramTypes;
     private String group;
     private String version;
+    //Dubbo中使用URL模型承接调用方自定义的参数,实现在真正调用时确定具体调用的SPI实现类,version1.1简单使用map实现
+    private final Map<String, String> customConfig = new HashMap<>();
+
 
     public String getRPCServiceName() {
         return this.getTargetService() + this.getGroup() + this.getVersion();

@@ -1,6 +1,7 @@
 package com.wlufei.rpc.framework.common.extensions;
 
 
+import com.wlufei.rpc.framework.common.RPCRequest;
 import com.wlufei.rpc.framework.common.annotation.Adaptive;
 import com.wlufei.rpc.framework.common.annotation.SPI;
 import com.wlufei.rpc.framework.common.factory.ExtensionFactory;
@@ -10,6 +11,8 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -102,6 +105,15 @@ public final class ExtensionLoader<T> {
         return (T) adaptiveInstance;
     }
 
+    public T getDefaultExtensionInstance() {
+        if (null == this.cachedDefaultName) {
+            throw new IllegalStateException("please set the interface [" + type.getName() + "] default impl.");
+        }
+        Map<String, Class<?>> cachedInstance = cachedClasses.get();
+
+        return getExtension(this.cachedDefaultName);
+    }
+
     @SuppressWarnings("unchecked")
     private T createAdaptiveExtension() {
         try {
@@ -124,8 +136,10 @@ public final class ExtensionLoader<T> {
                         //从方法名中取出属性名称
                         String property = method.getName().length() > 3 ? method.getName().substring(3, 4).toLowerCase() + method.getName().substring(4) : "";
                         Object extension = objectFactory.getExtension(parameterType, property);
+                        log.info("parameterType:{},property:{},extension:{}", parameterType, property, extension);
                         if (null != extension) {
                             method.invoke(newInstance, extension);
+                            log.info("instance:{},injected:{}", newInstance, extension);
                         }
                     } catch (Exception e) {
                         log.error("fail to inject via method " + method.getName()
@@ -206,9 +220,9 @@ public final class ExtensionLoader<T> {
         if (null == name || name.length() == 0) {
             throw new IllegalArgumentException("spi intance name can not be null");
         }
-        if (null != cachedDefaultName && cachedDefaultName.length() > 0) {
-            return getExtension(cachedDefaultName);
-        }
+//        if (null != cachedDefaultName && cachedDefaultName.length() > 0) {
+//            return getExtension(cachedDefaultName);
+//        }
         Holder<Object> holder = cachedInstances.get(name);
         if (null == holder) {
             cachedInstances.putIfAbsent(name, new Holder<>());
@@ -398,20 +412,16 @@ public final class ExtensionLoader<T> {
     private String createAdaptiveExtensionClassCode() {
         StringBuilder codeBuidler = new StringBuilder();
         Method[] methods = type.getMethods();
-        boolean hasAdaptiveAnnotation = false;
-        for (Method m : methods) {
-            if (m.isAnnotationPresent(Adaptive.class)) {
-                hasAdaptiveAnnotation = true;
-                break;
-            }
-        }
+        boolean hasAdaptiveAnnotation = Arrays.stream(methods).anyMatch(m -> m.isAnnotationPresent(Adaptive.class));
         // 完全没有Adaptive方法，则不需要生成Adaptive类
         if (!hasAdaptiveAnnotation)
             throw new IllegalStateException("No adaptive method on extension " + type.getName() + ", refuse to create the adaptive class!");
 
         codeBuidler.append("package " + type.getPackage().getName() + ";");
         codeBuidler.append("\nimport " + ExtensionLoader.class.getName() + ";");
-        codeBuidler.append("\npublic class " + type.getSimpleName() + "$Adpative" + " implements " + type.getCanonicalName() + " {");
+        codeBuidler.append("\nimport " + List.class.getName() + ";");
+        codeBuidler.append("\nimport " + String.class.getName() + ";");
+        codeBuidler.append("\npublic class " + type.getSimpleName() + "$Adaptive" + " implements " + type.getCanonicalName() + " {");
 
         for (Method method : methods) {
             Class<?> rt = method.getReturnType();
@@ -427,57 +437,27 @@ public final class ExtensionLoader<T> {
             } else {
                 int urlTypeIndex = -1;
                 for (int i = 0; i < pts.length; ++i) {
-                    if (pts[i].equals(com.wlufei.rpc.framework.common.URL.class)) {
+                    if (pts[i].equals(RPCRequest.class)) {
                         urlTypeIndex = i;
                         break;
                     }
                 }
-                // 有类型为URL的参数
+                // 有类型为RPCRequest的参数
                 if (urlTypeIndex != -1) {
                     // Null Point check
-                    String s = String.format("\nif (arg%d == null) throw new IllegalArgumentException(\"url == null\");",
+                    String s = String.format("\nif (arg%d == null) throw new IllegalArgumentException(\"request == null\");",
                             urlTypeIndex);
                     code.append(s);
 
-                    s = String.format("\n%s url = arg%d;", com.wlufei.rpc.framework.common.URL.class.getName(), urlTypeIndex);
+                    s = String.format("\n%s request = arg%d;", RPCRequest.class.getName(), urlTypeIndex);
                     code.append(s);
                 }
-                // 参数没有URL类型
+                // 这里不去支持参数的类型中的嵌套的自定义参数配置
                 else {
-                    String attribMethod = null;
-
-                    // 找到参数的URL属性
-                    LBL_PTS:
-                    for (int i = 0; i < pts.length; ++i) {
-                        Method[] ms = pts[i].getMethods();
-                        for (Method m : ms) {
-                            String name = m.getName();
-                            if ((name.startsWith("get") || name.length() > 3)
-                                    && Modifier.isPublic(m.getModifiers())
-                                    && !Modifier.isStatic(m.getModifiers())
-                                    && m.getParameterTypes().length == 0
-                                    && m.getReturnType() == com.wlufei.rpc.framework.common.URL.class) {
-                                urlTypeIndex = i;
-                                attribMethod = name;
-                                break LBL_PTS;
-                            }
-                        }
-                    }
-                    if (attribMethod == null) {
-                        throw new IllegalStateException("fail to create adative class for interface " + type.getName()
-                                + ": not found url parameter or url attribute in parameters of method " + method.getName());
-                    }
-
-                    // Null point check
-                    String s = String.format("\nif (arg%d == null) throw new IllegalArgumentException(\"%s argument == null\");",
-                            urlTypeIndex, pts[urlTypeIndex].getName());
-                    code.append(s);
-                    s = String.format("\nif (arg%d.%s() == null) throw new IllegalArgumentException(\"%s argument %s() == null\");",
-                            urlTypeIndex, attribMethod, pts[urlTypeIndex].getName(), attribMethod);
-                    code.append(s);
-
-                    s = String.format("%s url = arg%d.%s();", com.wlufei.rpc.framework.common.URL.class.getName(), urlTypeIndex, attribMethod);
-                    code.append(s);
+                    throw new IllegalStateException("fail to create adaptive class for interface " + type.getName()
+                            + ": not found url parameter  of method " + method.getName());
+//                    throw new IllegalStateException("fail to create adaptive class for interface " + type.getName()
+//                            + ": not found url parameter or url attribute in parameters of method " + method.getName());
                 }
 
                 String[] value = adaptiveAnnotation.value();
@@ -497,58 +477,19 @@ public final class ExtensionLoader<T> {
                     }
                     value = new String[]{sb.toString()};
                 }
-
-                boolean hasInvocation = false;
-                for (int i = 0; i < pts.length; ++i) {
-                    if (pts[i].getName().equals("com.alibaba.dubbo.rpc.Invocation")) {
-                        // Null Point check
-                        String s = String.format("\nif (arg%d == null) throw new IllegalArgumentException(\"invocation == null\");", i);
-                        code.append(s);
-                        s = String.format("\nString methodName = arg%d.getMethodName();", i);
-                        code.append(s);
-                        hasInvocation = true;
-                        break;
-                    }
-                }
-
-                String defaultExtName = cachedDefaultName;
-                String getNameCode = null;
-                for (int i = value.length - 1; i >= 0; --i) {
-                    if (i == value.length - 1) {
-                        if (null != defaultExtName) {
-                            if (!"protocol".equals(value[i]))
-                                if (hasInvocation)
-                                    getNameCode = String.format("url.getMethodParameter(methodName, \"%s\", \"%s\")", value[i], defaultExtName);
-                                else
-                                    getNameCode = String.format("url.getParameter(\"%s\", \"%s\")", value[i], defaultExtName);
-                            else
-                                getNameCode = String.format("( url.getProtocol() == null ? \"%s\" : url.getProtocol() )", defaultExtName);
-                        } else {
-                            if (!"protocol".equals(value[i]))
-                                if (hasInvocation)
-                                    getNameCode = String.format("url.getMethodParameter(methodName, \"%s\", \"%s\")", value[i], defaultExtName);
-                                else
-                                    getNameCode = String.format("url.getParameter(\"%s\")", value[i]);
-                            else
-                                getNameCode = "url.getProtocol()";
-                        }
-                    } else {
-                        if (!"protocol".equals(value[i]))
-                            if (hasInvocation)
-                                getNameCode = String.format("url.getMethodParameter(methodName, \"%s\", \"%s\")", value[i], defaultExtName);
-                            else
-                                getNameCode = String.format("url.getParameter(\"%s\", %s)", value[i], getNameCode);
-                        else
-                            getNameCode = String.format("url.getProtocol() == null ? (%s) : url.getProtocol()", getNameCode);
-                    }
-                }
-                code.append("\nString extName = ").append(getNameCode).append(";");
-                // check extName == null?
-                String s = String.format("\nif(extName == null) " +
-                                "throw new IllegalStateException(\"Fail to get extension(%s) name from url(\" + url.toString() + \") use keys(%s)\");",
-                        type.getName(), Arrays.toString(value));
+                String s = String.format("\nString methodName = arg%d.getTargetMethod();", urlTypeIndex);
+                code.append(s);
+                s = String.format("\nif (methodName == null) throw new IllegalArgumentException(\"RPCRequest.targetMethod == null\");");
                 code.append(s);
 
+//                String defaultExtName = cachedDefaultName;
+
+                String getNameCode = String.format("\nString extName = request.getCustomConfig().get(\"%s\");",value[0]);
+                code.append(getNameCode);
+                String extNameNullCheck = String.format("\nif(extName == null) " +
+                                "throw new IllegalStateException(\"Fail to get extension(%s) name from url(\" + request.toString() + \") use keys(%s)\");",
+                        type.getName(), Arrays.toString(value));
+                code.append(extNameNullCheck);
                 s = String.format("\n%s extension = (%<s)%s.getExtensionLoader(%s.class).getExtension(extName);",
                         type.getName(), ExtensionLoader.class.getSimpleName(), type.getName());
                 code.append(s);
@@ -569,14 +510,36 @@ public final class ExtensionLoader<T> {
             }
 
             codeBuidler.append("\npublic " + rt.getCanonicalName() + " " + method.getName() + "(");
-            for (int i = 0; i < pts.length; i++) {
-                if (i > 0) {
-                    codeBuidler.append(", ");
+            Type[] types = method.getGenericParameterTypes();
+            for (int i = 0; i < types.length; i++) {
+                if (i >0){
+                    codeBuidler.append(",");
                 }
-                codeBuidler.append(pts[i].getCanonicalName());
+                Type type = types[i];
+//                if (type instanceof ParameterizedType){
+//                    Type rawType = ((ParameterizedType) type).getRawType();
+                String replace = type.getTypeName().replace("java.util.", "");
+                String replace1 = replace.replace("java.lang.", "");
+                codeBuidler.append(replace1);
+//                    codeBuidler.append(type.getTypeName());
                 codeBuidler.append(" ");
                 codeBuidler.append("arg" + i);
+//                }else {
+//
+//                }
             }
+
+//            for (int i = 0; i < pts.length; i++) {
+//                if (i > 0) {
+//                    codeBuidler.append(", ");
+//                }
+//                //这里针对List<String>实现,反射获取String类型.
+//                //todo 待实现类型自动判断生成与接口一致的方法参数
+//                Class<?> pt = pts[i];
+//                codeBuidler.append(pts[i].getCanonicalName()).append("<String>");
+//                codeBuidler.append(" ");
+//                codeBuidler.append("arg" + i);
+//            }
             codeBuidler.append(")");
             if (ets.length > 0) {
                 codeBuidler.append(" throws ");
@@ -592,9 +555,8 @@ public final class ExtensionLoader<T> {
             codeBuidler.append("\n}");
         }
         codeBuidler.append("\n}");
-        if (log.isDebugEnabled()) {
-            log.debug(codeBuidler.toString());
-        }
+
+        log.info(codeBuidler.toString());
         return codeBuidler.toString();
     }
 

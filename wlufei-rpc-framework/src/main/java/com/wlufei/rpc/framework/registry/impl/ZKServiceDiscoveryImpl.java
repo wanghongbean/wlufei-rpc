@@ -2,7 +2,6 @@ package com.wlufei.rpc.framework.registry.impl;
 
 
 import com.wlufei.rpc.framework.common.RPCRequest;
-import com.wlufei.rpc.framework.common.URL;
 import com.wlufei.rpc.framework.common.enums.RpcErrorMessageEnum;
 import com.wlufei.rpc.framework.common.exception.RpcException;
 import com.wlufei.rpc.framework.common.utils.CuratorUtils;
@@ -37,8 +36,8 @@ public class ZKServiceDiscoveryImpl implements ServiceDiscovery {
         if (null == childrenNodes || childrenNodes.isEmpty()) {
             throw new RpcException(RpcErrorMessageEnum.SERVICE_CAN_NOT_BE_FOUND, rpcRequest.getRPCServiceName());
         }
-        URL url = URL.valueOf("");
-        String targetServiceAddress = loadBalance.whichOne(childrenNodes, url, rpcRequest);
+
+        String targetServiceAddress = loadBalance.whichOne(childrenNodes, rpcRequest);
         log.info("lookup service success.serviceName:{},server:{}", rpcRequest.getRPCServiceName(), targetServiceAddress);
         String[] socketAddressArray = targetServiceAddress.split(":");
         String host = socketAddressArray[0];

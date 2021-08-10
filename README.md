@@ -41,17 +41,20 @@
 ### 负载均衡SPI实现类
 
 ### 遗留问题
-1. com.wlufei.rpc.framework.client.SocketRPCClient.sendRPCRequest#socket.connect(inetSocketAddress);偶尔超时  
-  可能是家庭路由器配置问题,导致获取到的IP地址在变化
+- [x] com.wlufei.rpc.framework.client.SocketRPCClient.sendRPCRequest#socket.connect(inetSocketAddress);偶尔超时  
+   客户端调用超时问题,原因是zk上注册了公司的IP相同的服务,随机的调用到无效的IP上导致超时
 
 ### 知识短板
 1. Class 相关API,如 `clazz.newInstance()`,`Class<?> clazz = Class.forName(line, true, classLoader)`
 
 # 1.2 版本功能
 - [ ] SPI扩展加载增强功能实现  
-  - [ ] 实现服务注入
+  - [x] 实现服务注入
   - [ ] wrapper增强功能
 - [ ] 数据传输序列化
+
+### 遗留问题
+- [ ] ExtensionLoader自适应扩展javassist编译代码问题
 
 > 参考内容
 > 1. [dubbo可扩展机制源码解析](https://dubbo.apache.org/zh/blog/2019/05/02/dubbo%E5%8F%AF%E6%89%A9%E5%B1%95%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/)

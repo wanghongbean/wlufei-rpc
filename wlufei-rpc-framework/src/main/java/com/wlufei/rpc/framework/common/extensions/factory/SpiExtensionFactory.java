@@ -17,6 +17,7 @@ import java.util.Arrays;
 @Slf4j
 public class SpiExtensionFactory implements ExtensionFactory {
     public static final String SPI_FACTORY = "spiFactory";
+
     @Override
     public <T> T getExtension(Class<T> clazz, String name) {
         if (clazz.isInterface() && clazz.isAnnotationPresent(SPI.class)) {
@@ -24,6 +25,14 @@ public class SpiExtensionFactory implements ExtensionFactory {
             log.info("loader:{} supported extensions:{}", loader.getClass().getName(), Arrays.toString(loader.getSupportedExtensions().toArray()));
             if (loader.getSupportedExtensions().size() > 0) {
                 return loader.getAdaptiveExtension();
+//                T instance;
+//                try {
+//                    instance = loader.getAdaptiveExtension();
+//                } catch (Exception e) {
+//                    log.error("load adaptiveExtension error. cause "+e.getMessage(),e);
+//                    instance = loader.getDefaultExtensionInstance();
+//                }
+//                return instance;
             }
         }
         return null;

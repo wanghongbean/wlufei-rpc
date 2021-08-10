@@ -98,6 +98,33 @@ public final class CuratorUtils {
         });
         log.info("All registered services on the server are cleared:[{}]", REGISTERED_PATH_SET.toString());
     }
+    public static void clearRegistry(CuratorFramework zkClient,String rpcServiceName) {
+        String servicePath = ZK_REGISTER_ROOT_PATH + "/" + rpcServiceName;
+        try {
+            List<String> result = zkClient.getChildren().forPath(servicePath);
+            if (null == result && result.isEmpty()){
+                return;
+            }
+            result.stream().forEach(r-> {
+                try {
+                    zkClient.delete().forPath(servicePath+"/"+r);
+                } catch (Exception e) {
+                    log.error(e.getMessage(),e);
+                }
+            });
+        } catch (Exception e) {
+            log.error(e.getMessage(),e);
+        }
+
+//        REGISTERED_PATH_SET.stream().parallel().forEach(p -> {
+//            try {
+//                    zkClient.delete().forPath(p);
+//            } catch (Exception e) {
+//                log.error("clear registry for path [{}] fail", p);
+//            }
+//        });
+//        log.info("All registered services on the server are cleared:[{}]", REGISTERED_PATH_SET.toString());
+    }
 
     public static CuratorFramework getZkClient() {
         // check if user has set zk address
