@@ -42,7 +42,7 @@ public class SocketRPCServer implements RPCServer {
         try {
             ServerSocket server = new ServerSocket();
             String hostAddress = InetAddress.getLocalHost().getHostAddress();
-            server.bind(new InetSocketAddress(hostAddress, 8888));
+            server.bind(new InetSocketAddress(hostAddress, PORT));
             while (true) {
                 Socket socket = server.accept();
                 log.info("client connected:{}", socket.getInetAddress());
