@@ -53,7 +53,9 @@ randomLoadBalance实现类已实现SPI加载方式，且实现了Dubbo的IOC功�
 - [ ] SPI扩展加载增强功能实现  
   - [x] 实现服务注入
   - [ ] wrapper增强功能
-- [ ] 数据传输序列化
+- [ ] Protocol 协议
+  - [ ] 定义通过协议的服务暴露和服务引用流程
+  - [ ] 实现自定义Protocol实现类
 
 ### 遗留问题
 - [x] ExtensionLoader自适应扩展javassist编译代码问题 修改自定义的URL.class类型
