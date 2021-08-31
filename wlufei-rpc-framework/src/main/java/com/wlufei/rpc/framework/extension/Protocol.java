@@ -12,6 +12,8 @@ import com.wlufei.rpc.framework.common.exception.RpcException;
  */
 @SPI("dubbo")
 public interface Protocol {
+
+    int getDefaultPort();
     /**
      * 暴露远程服务：<br>
      * 1. 协议在接收请求时，应记录请求来源方地址信息：RpcContext.getContext().setRemoteAddress();<br>
