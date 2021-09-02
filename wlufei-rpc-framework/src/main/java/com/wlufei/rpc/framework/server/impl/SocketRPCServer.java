@@ -2,6 +2,7 @@ package com.wlufei.rpc.framework.server.impl;
 
 
 import com.wlufei.rpc.framework.common.utils.ThreadPoolFactoryUtils;
+import com.wlufei.rpc.framework.config.CustomShutdownHook;
 import com.wlufei.rpc.framework.config.RpcServiceConfig;
 import com.wlufei.rpc.framework.provider.ServiceProvider;
 import com.wlufei.rpc.framework.provider.impl.ServiceProviderImpl;
@@ -40,6 +41,7 @@ public class SocketRPCServer implements RPCServer {
     @Override
     public void start() {
         try {
+            CustomShutdownHook.getCustomShutdownHook().clearAll();
             ServerSocket server = new ServerSocket();
             String hostAddress = InetAddress.getLocalHost().getHostAddress();
             server.bind(new InetSocketAddress(hostAddress, PORT));
