@@ -559,4 +559,6 @@ public class Constants {
 
     public static final String GENERIC_SERIALIZATION_BEAN          = "bean";
 
+    String BIND_PORT_KEY = "bind.port";
+
 }
